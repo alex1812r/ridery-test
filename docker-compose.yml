@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: ridery-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: ridery
+    ports:
+      - "27017:27017"
+
+  backend:
+    build:
+      context: ./server
+    container_name: ridery-backend
+    env_file:
+      - ./server/.env
+    environment:
+      # Sobrescribir MONGODB_URI para usar el servicio de Docker
+      MONGODB_URI: mongodb://mongodb:27017/ridery
+    depends_on:
+      - mongodb
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: ridery-frontend
+    env_file:
+      - ./client/.env
+    depends_on:
+      - backend
+    ports:
+      - "4173:80"
+
+volumes:
+  mongo_data:
+

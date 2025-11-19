@@ -1,0 +1,35 @@
+El stack es: Node.js + Express (Backend) y Vue.js 3 + Vite + Quasar/Vuetify (Frontend).
+
+Backend:
+- Usar Clean Architecture (Controladores, Servicios, Modelos, Rutas separados).
+- Mongoose para la BD.
+
+Frontend:
+- Vue 3 con <script setup>.
+- Pinia para estado.
+- Screaming Architecture (módulos por funcionalidad).
+
+Estilo:
+- Código limpio, variables en inglés.
+- Comentarios explicativos en español.
+
+Seguridad:
+- JWT obligatorio.
+- Contraseñas hasheadas.
+
+Buenas prácticas:
+- Siempre sugerir tipos o validaciones robustas.
+Actúa como un Arquitecto de Software Senior. Necesito inicializar este proyecto. Crea un archivo .cursorrules en la raíz que contenga las siguientes instrucciones para la IA:
+
+El stack es: Node.js + Express (Backend) y Vue.js 3 + Vite + Quasar/Vuetify (Frontend).
+
+Backend: Usar Clean Architecture (Controladores, Servicios, Modelos, Rutas separados). Mongoose para la BD.
+
+Frontend: Vue 3 con <script setup>, usar Pinia para estado, y Screaming Architecture (módulos por funcionalidad).
+
+Estilo: Código limpio, variables en inglés, comentarios explicativos en español.
+
+Seguridad: JWT obligatorio y contraseñas hasheadas.
+
+Siempre sugerir tipos o validaciones robustas.
+
