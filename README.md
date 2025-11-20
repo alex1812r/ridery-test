@@ -29,8 +29,7 @@ ridery/
 │   ├── .env                # Variables de entorno (crear)
 │   ├── Dockerfile          # Imagen Docker del frontend
 │   ├── nginx.conf          # Configuración Nginx
-│   ├── README.md           # Documentación del frontend
-│   └── ENV_VARIABLES.md    # Variables de entorno requeridas
+│   └── README.md           # Documentación del frontend
 │
 ├── docker-compose.yml      # Orquestación de servicios
 └── README.md               # Este archivo
