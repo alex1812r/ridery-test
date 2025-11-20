@@ -2,15 +2,24 @@ import mongoose from 'mongoose';
 
 const vehicleSchema = new mongoose.Schema(
   {
-    mark: {
+    vehicleId: {
       type: String,
       required: true,
-      trim: true
+      unique: true,
+      trim: true,
+      index: true
+    },
+    mark: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'VehicleMark',
+      required: true,
+      index: true
     },
     model: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'VehicleModel',
       required: true,
-      trim: true
+      index: true
     },
     year: {
       type: Number,

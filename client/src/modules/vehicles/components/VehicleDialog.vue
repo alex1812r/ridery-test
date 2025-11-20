@@ -23,15 +23,22 @@
 
       <v-card-text class="pt-6">
         <Form
+          :key="formKey"
           @submit="onSubmit"
           :validation-schema="vehicleSchema"
           :initial-values="initialValues"
           v-slot="{ errors: formErrors, setFieldValue }"
         >
           <Field name="mark" v-slot="{ field, errorMessage }">
-            <v-text-field
-              v-bind="field"
+            <v-select
+              :model-value="field.value"
+              @update:model-value="(value) => {
+                field.onChange(value);
+                handleMarkChange(value, setFieldValue);
+              }"
+              @blur="field.onBlur"
               label="Marca"
+              :items="markOptions"
               prepend-inner-icon="mdi-car-sports"
               variant="outlined"
               color="primary"
@@ -39,19 +46,25 @@
               class="mb-4"
               density="comfortable"
               autofocus
+              :disabled="loading"
             />
           </Field>
 
           <Field name="model" v-slot="{ field, errorMessage }">
-            <v-text-field
-              v-bind="field"
+            <v-select
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+              @blur="field.onBlur"
               label="Modelo"
+              :items="availableModels"
               prepend-inner-icon="mdi-car"
               variant="outlined"
               color="primary"
               :error-messages="errorMessage"
               class="mb-4"
               density="comfortable"
+              :disabled="!selectedMark || loading"
+              :placeholder="selectedMark ? 'Seleccione un modelo' : 'Primero seleccione una marca'"
             />
           </Field>
 
@@ -155,9 +168,10 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, nextTick } from 'vue';
+import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { Form, Field } from 'vee-validate';
 import { vehicleSchema } from '../schemas/vehicleSchema.js';
+import { useVehicleMarkStore } from '../stores/vehicleMarkStore.js';
 
 const props = defineProps({
   modelValue: {
@@ -180,11 +194,25 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'submit', 'close']);
 
+// Store de marcas y modelos
+const vehicleMarkStore = useVehicleMarkStore();
+
 // Inicializar todas las refs primero
 const dialog = ref(props.modelValue);
 const errorMessage = ref('');
 const selectedMonth = ref(null);
 const selectedYear = ref(null);
+const formKey = ref(0);
+const selectedMark = ref(null);
+const availableModels = ref([]);
+
+// Opciones de marcas desde el store
+const markOptions = computed(() => {
+  return vehicleMarkStore.marks.map(mark => ({
+    title: mark.name,
+    value: mark._id
+  }));
+});
 
 // Computed después de las refs
 const isEdit = computed(() => !!props.vehicle);
@@ -192,9 +220,13 @@ const isEdit = computed(() => !!props.vehicle);
 // Valores iniciales del formulario
 const initialValues = computed(() => {
   if (props.vehicle) {
+    // Si el vehículo tiene mark y model como objetos poblados, usar sus _id
+    const markId = props.vehicle.mark?._id || props.vehicle.mark || '';
+    const modelId = props.vehicle.model?._id || props.vehicle.model || '';
+    
     return {
-      mark: props.vehicle.mark || '',
-      model: props.vehicle.model || '',
+      mark: markId,
+      model: modelId,
       year: props.vehicle.year?.toString() || '',
       status: props.vehicle.status || 'available'
     };
@@ -206,6 +238,32 @@ const initialValues = computed(() => {
     status: 'available'
   };
 });
+
+// Handler para cuando cambia la marca (cascada)
+const handleMarkChange = async (markId, setFieldValue) => {
+  // Actualizar la marca seleccionada
+  selectedMark.value = markId;
+  
+  // Limpiar el modelo cuando cambia la marca
+  if (setFieldValue) {
+    setFieldValue('model', '');
+  }
+  
+  // Cargar modelos de la marca seleccionada
+  if (markId) {
+    const result = await vehicleMarkStore.fetchModelsByMark(markId);
+    if (result.success) {
+      availableModels.value = result.data.map(model => ({
+        title: model.name,
+        value: model._id
+      }));
+    } else {
+      availableModels.value = [];
+    }
+  } else {
+    availableModels.value = [];
+  }
+};
 
 // Opciones de meses en español
 const monthOptions = [
@@ -283,35 +341,84 @@ const getStatusColor = (status) => {
 };
 
 // Watch para sincronizar dialog con modelValue
-watch(() => props.modelValue, (newVal) => {
+watch(() => props.modelValue, async (newVal) => {
   dialog.value = newVal;
   if (newVal) {
+    // Forzar re-render del formulario cuando se abre el dialog
+    formKey.value += 1;
     // Cuando se abre el dialog, inicializar valores
-    nextTick(() => {
-      if (props.vehicle?.year) {
-        selectedYear.value = props.vehicle.year;
-        selectedMonth.value = 1; // Enero por defecto
-      } else {
-        selectedYear.value = null;
-        selectedMonth.value = null;
+    await nextTick();
+    
+    // Inicializar marca si hay vehículo
+    if (props.vehicle?.mark) {
+      const markId = props.vehicle.mark?._id || props.vehicle.mark;
+      selectedMark.value = markId;
+      
+      // Cargar modelos de la marca
+      if (markId) {
+        const result = await vehicleMarkStore.fetchModelsByMark(markId);
+        if (result.success) {
+          availableModels.value = result.data.map(model => ({
+            title: model.name,
+            value: model._id
+          }));
+        }
       }
-    });
+    } else {
+      selectedMark.value = null;
+      availableModels.value = [];
+    }
+    
+    if (props.vehicle?.year) {
+      selectedYear.value = props.vehicle.year;
+      selectedMonth.value = 1; // Enero por defecto
+    } else {
+      selectedYear.value = null;
+      selectedMonth.value = null;
+    }
   } else {
     // Cuando se cierra, limpiar valores
     errorMessage.value = '';
     selectedYear.value = null;
     selectedMonth.value = null;
+    selectedMark.value = null;
+    availableModels.value = [];
   }
 });
 
 // Watch para cuando cambia el vehículo
-watch(() => props.vehicle, (newVehicle) => {
-  if (newVehicle?.year && dialog.value) {
-    nextTick(() => {
+watch(() => props.vehicle, async (newVehicle) => {
+  if (newVehicle && dialog.value) {
+    await nextTick();
+    
+    // Inicializar marca
+    if (newVehicle.mark) {
+      const markId = newVehicle.mark?._id || newVehicle.mark;
+      selectedMark.value = markId;
+      
+      // Cargar modelos de la marca
+      if (markId) {
+        const result = await vehicleMarkStore.fetchModelsByMark(markId);
+        if (result.success) {
+          availableModels.value = result.data.map(model => ({
+            title: model.name,
+            value: model._id
+          }));
+        }
+      }
+    }
+    
+    // Inicializar año
+    if (newVehicle.year) {
       selectedYear.value = newVehicle.year;
       selectedMonth.value = 1; // Enero por defecto
-    });
+    }
   }
+});
+
+// Cargar marcas al montar el componente
+onMounted(async () => {
+  await vehicleMarkStore.fetchMarks();
 });
 
 watch(() => props.error, (newError) => {

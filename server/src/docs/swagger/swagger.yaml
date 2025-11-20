@@ -117,17 +117,15 @@ paths:
                     email: user@example.com
                   token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
         '400':
-          description: Email y contraseña son requeridos
+          description: Error de validación - Email y contraseña requeridos o credenciales inválidas
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Credenciales inválidas
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                message: Credenciales inválidas
+                error: Credenciales inválidas
 
   /api/auth/profile:
     put:
@@ -331,7 +329,7 @@ paths:
   /api/vehicles:
     get:
       summary: Lista todos los vehículos
-      description: Obtiene una lista paginada de vehículos ordenados por fecha descendente
+      description: Obtiene una lista paginada de vehículos con ordenamiento personalizable y filtros de búsqueda. Por defecto ordena por fecha de creación descendente (más recientes primero).
       tags:
         - Vehicles
       security:
@@ -351,6 +349,49 @@ paths:
             minimum: 1
             default: 10
           description: Cantidad de elementos por página
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - vehicleId
+              - mark
+              - model
+              - year
+              - status
+              - createdAt
+              - updatedAt
+            default: createdAt
+          description: Campo por el cual ordenar los vehículos
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          description: Orden de clasificación (ascendente o descendente)
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Búsqueda general en marca, modelo e ID único (búsqueda parcial, case-insensitive)
+          example: Toyota
+        - in: query
+          name: yearFrom
+          schema:
+            type: integer
+            minimum: 1900
+          description: Año de fabricación desde (inclusive)
+          example: 2020
+        - in: query
+          name: yearTo
+          schema:
+            type: integer
+            minimum: 1900
+          description: Año de fabricación hasta (inclusive)
+          example: 2023
       responses:
         '200':
           description: Lista de vehículos obtenida exitosamente
@@ -416,10 +457,12 @@ paths:
               properties:
                 mark:
                   type: string
-                  example: Toyota
+                  description: ID de MongoDB de la marca (VehicleMark ObjectId)
+                  example: 507f1f77bcf86cd799439011
                 model:
                   type: string
-                  example: Corolla
+                  description: ID de MongoDB del modelo (VehicleModel ObjectId)
+                  example: 507f1f77bcf86cd799439012
                 year:
                   type: number
                   minimum: 1900
@@ -447,6 +490,158 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/vehicles/{id}:
+    get:
+      summary: Obtiene un vehículo por su ID
+      description: Retorna los datos de un vehículo específico
+      tags:
+        - Vehicles
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID del vehículo (MongoDB ObjectId)
+      responses:
+        '200':
+          description: Vehículo obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID de vehículo inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Actualiza un vehículo
+      description: Actualiza los datos de un vehículo existente (marca, modelo, año, estado)
+      tags:
+        - Vehicles
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID del vehículo (MongoDB ObjectId)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mark
+                - model
+                - year
+              properties:
+                mark:
+                  type: string
+                  description: ID de MongoDB de la marca (VehicleMark ObjectId)
+                  example: 507f1f77bcf86cd799439011
+                model:
+                  type: string
+                  description: ID de MongoDB del modelo (VehicleModel ObjectId)
+                  example: 507f1f77bcf86cd799439012
+                year:
+                  type: number
+                  minimum: 1900
+                  example: 2023
+                status:
+                  type: string
+                  enum:
+                    - available
+                    - maintenance
+                    - service
+                  default: available
+                  example: available
+      responses:
+        '200':
+          description: Vehículo actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Error de validación o ID inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Elimina un vehículo
+      description: Elimina un vehículo del sistema
+      tags:
+        - Vehicles
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID del vehículo (MongoDB ObjectId)
+      responses:
+        '200':
+          description: Vehículo eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID de vehículo inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vehículo no encontrado
           content:
             application/json:
               schema:
@@ -504,6 +699,125 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/vehicle-marks:
+    get:
+      summary: Obtiene todas las marcas de vehículos
+      description: Retorna una lista de todas las marcas disponibles en el sistema
+      tags:
+        - VehicleMarks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de marcas obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      marks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VehicleMark'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/vehicle-marks/with-models:
+    get:
+      summary: Obtiene todas las marcas con sus modelos
+      description: Retorna todas las marcas junto con sus modelos asociados
+      tags:
+        - VehicleMarks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de marcas con modelos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      marks:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/VehicleMark'
+                            - type: object
+                              properties:
+                                models:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/VehicleModel'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/vehicle-marks/{markId}/models:
+    get:
+      summary: Obtiene los modelos de una marca específica
+      description: Retorna todos los modelos asociados a una marca
+      tags:
+        - VehicleMarks
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: markId
+          required: true
+          schema:
+            type: string
+          description: ID de la marca (MongoDB ObjectId)
+      responses:
+        '200':
+          description: Lista de modelos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      models:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VehicleModel'
+        '400':
+          description: ID de marca inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado - Token inválido o faltante
           content:
             application/json:
               schema:

@@ -53,7 +53,8 @@ export const login = async (req, res) => {
     console.error('Error en login:', error);
 
     // Determinar el código de estado según el tipo de error
-    const statusCode = error.statusCode || 401;
+    // 400 para credenciales inválidas, 401 solo para errores de autenticación de token
+    const statusCode = error.statusCode || 400;
 
     res.status(statusCode).json({
       success: false,

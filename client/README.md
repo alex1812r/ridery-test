@@ -40,11 +40,13 @@ client/
 │   │   ├── vehicles/            # Módulo de Vehículos
 │   │   │   ├── components/      # Componentes específicos del módulo
 │   │   │   │   ├── VehicleDialog.vue    # Dialog crear/editar vehículo
-│   │   │   │   └── StatusDialog.vue      # Dialog cambiar estado
+│   │   │   │   ├── StatusDialog.vue      # Dialog cambiar estado
+│   │   │   │   └── ConfirmDialog.vue     # Dialog de confirmación reutilizable
 │   │   │   ├── schemas/
 │   │   │   │   └── vehicleSchema.js     # Validación de vehículos
 │   │   │   ├── stores/
-│   │   │   │   └── vehicleStore.js      # Store de vehículos (Pinia)
+│   │   │   │   ├── vehicleStore.js      # Store de vehículos (Pinia)
+│   │   │   │   └── vehicleMarkStore.js  # Store de marcas y modelos (Pinia)
 │   │   │   └── views/
 │   │   │       ├── DashboardView.vue    # Dashboard con indicadores
 │   │   │       └── VehiclesView.vue     # Lista de vehículos con paginación
@@ -56,8 +58,7 @@ client/
 │   │           └── ProfileView.vue     # Editar perfil y cambiar contraseña
 │   │
 │   ├── components/               # Componentes globales
-│   │   ├── DashboardLayout.vue  # Layout principal con sidebar y navegación
-│   │   └── HelloWorld.vue
+│   │   └── DashboardLayout.vue  # Layout principal con sidebar y navegación
 │   │
 │   ├── plugins/                  # Plugins de Vue
 │   │   └── vuetify.js            # Configuración de Vuetify
@@ -77,8 +78,7 @@ client/
 ├── nginx.conf                    # Configuración de Nginx para producción
 ├── package.json
 ├── vite.config.js                # Configuración de Vite
-├── .env                          # Variables de entorno (no versionado)
-└── ENV_VARIABLES.md              # Documentación de variables de entorno
+└── .env                          # Variables de entorno (no versionado)
 ```
 
 ## 🔑 Módulos y Funcionalidades
@@ -108,21 +108,32 @@ client/
 
 **Vistas:**
 - `DashboardView.vue` - Dashboard principal con indicadores (usuarios, vehículos, activos)
-- `VehiclesView.vue` - Lista de vehículos con paginación server-side
+- `VehiclesView.vue` - Lista de vehículos con paginación server-side, ordenamiento y filtros
 
 **Componentes:**
-- `VehicleDialog.vue` - Dialog para crear/editar vehículos
+- `VehicleDialog.vue` - Dialog para crear/editar vehículos con formulario en cascada
 - `StatusDialog.vue` - Dialog para cambiar estado de vehículo
+- `ConfirmDialog.vue` - Componente reutilizable para confirmación de acciones
 
-**Store:**
-- `vehicleStore.js` - Gestión de estado de vehículos (fetch, create, update status)
+**Stores:**
+- `vehicleStore.js` - Gestión de estado de vehículos (fetch, create, update, delete)
+- `vehicleMarkStore.js` - Gestión de marcas y modelos desde el backend
 
 **Características:**
-- Paginación server-side con `v-data-table-server`
-- Indicadores del dashboard con llamadas a API
-- Validación de formularios con VeeValidate
-- Estados visuales con chips de colores
-- Manejo de loading y errores
+- **Paginación server-side** con `v-data-table-server`
+- **Ordenamiento** por múltiples campos (vehicleId, mark, model, year, status)
+- **Filtros avanzados**:
+  - Búsqueda unificada en marca, modelo e ID único (con debounce de 500ms)
+  - Filtro por rango de años (yearFrom, yearTo) con selects
+- **Formulario en cascada**: Marca → Modelo (se alimenta dinámicamente del backend)
+- **Atributos cerrados**: Todos los campos son selects con opciones predefinidas
+- **CRUD completo**: Crear, leer, actualizar y eliminar vehículos
+- **Confirmación de eliminación**: Modal reutilizable con estado de carga
+- **Indicadores del dashboard** con llamadas a API
+- **Validación de formularios** con VeeValidate
+- **Estados visuales** con chips de colores
+- **Manejo de loading y errores**
+- **Snackbars** para feedback de acciones (éxito/error)
 
 ### 3. Módulo de Perfil (`/modules/profile`)
 
@@ -192,12 +203,20 @@ Crea un archivo `.env` en la raíz del proyecto `client/`:
 VITE_API_URL=http://localhost:5000/api
 ```
 
+**Notas sobre variables de entorno:**
+- Las variables de Vite deben comenzar con `VITE_` para estar disponibles en el código
+- Esta variable se usa en tiempo de build, no en runtime
+- En producción, actualiza con la URL real de tu backend
+- Con Docker: usa `http://localhost:5000/api`
+- Desarrollo local: usa `http://localhost:5000/api`
+
 ## 💻 Uso
 
 ### Desarrollo:
 ```bash
 npm run dev
 ```
+El frontend estará disponible en: `http://localhost:5173` (puerto por defecto de Vite)
 
 ### Compilar para producción:
 ```bash
@@ -240,10 +259,96 @@ docker compose up --build
 - ✅ **Gestión de estado**: Pinia stores por módulo
 - ✅ **Validación de formularios**: VeeValidate + Zod
 - ✅ **Paginación server-side**: Tabla de vehículos con paginación del backend
+- ✅ **Ordenamiento server-side**: Por múltiples campos
+- ✅ **Filtros avanzados**: Búsqueda unificada y filtro por rango de años
+- ✅ **Formulario en cascada**: Marca → Modelo (alimentado desde backend)
+- ✅ **Atributos cerrados**: Todos los campos son selects con opciones predefinidas
+- ✅ **CRUD completo**: Crear, leer, actualizar y eliminar vehículos
 - ✅ **Dashboard con métricas**: Indicadores en tiempo real
 - ✅ **UI moderna**: Vuetify con Material Design
 - ✅ **Manejo de errores**: Interceptores de Axios para errores 401
+- ✅ **Feedback visual**: Snackbars para acciones exitosas/errores
+- ✅ **Componentes reutilizables**: ConfirmDialog para confirmaciones
 - ✅ **Responsive design**: Adaptable a móviles y tablets
+
+## 🔄 Cómo Funciona la Aplicación
+
+### Flujo de Autenticación
+
+1. **Login/Registro**: Usuario ingresa credenciales
+2. **API Call**: Frontend envía petición al backend
+3. **Token Storage**: Si es exitoso, guarda token en `localStorage`
+4. **Router Guard**: Verifica token antes de permitir acceso a rutas protegidas
+5. **Interceptor**: Axios agrega automáticamente `Authorization: Bearer <token>` en cada petición
+6. **Logout**: Limpia token y redirige a login
+
+### Flujo de Gestión de Vehículos
+
+1. **Carga Inicial**:
+   - `VehiclesView` carga vehículos con `vehicleStore.fetchVehicles()`
+   - Backend retorna vehículos con objetos poblados (`mark.name`, `model.name`)
+   - Tabla muestra datos usando slots personalizados
+
+2. **Crear Vehículo**:
+   - Usuario hace clic en "Nuevo Vehículo"
+   - `VehicleDialog` se abre y carga marcas desde `vehicleMarkStore.fetchMarks()`
+   - Usuario selecciona marca → Se cargan modelos con `vehicleMarkStore.fetchModelsByMark(markId)`
+   - Usuario completa formulario (marca, modelo, año, estado)
+   - Al enviar, se envían ObjectIds de marca y modelo al backend
+   - Backend valida y crea vehículo
+   - Tabla se recarga automáticamente
+
+3. **Editar Vehículo**:
+   - Usuario hace clic en "Editar" desde el menú de acciones
+   - `VehicleDialog` se abre con datos del vehículo
+   - Carga marca y modelos correspondientes
+   - Usuario modifica y guarda
+   - Backend actualiza y tabla se recarga
+
+4. **Eliminar Vehículo**:
+   - Usuario hace clic en "Eliminar"
+   - Se muestra `ConfirmDialog` con mensaje personalizado
+   - Al confirmar, se envía petición DELETE al backend
+   - Tabla se recarga y se muestra snackbar de éxito
+
+### Flujo de Formulario en Cascada
+
+1. **Carga de Marcas**: Al abrir el dialog, se cargan todas las marcas desde el backend
+2. **Selección de Marca**: Usuario selecciona una marca del select
+3. **Carga de Modelos**: Automáticamente se cargan los modelos de esa marca desde `GET /api/vehicle-marks/:markId/models`
+4. **Habilitación de Modelo**: El select de modelo se habilita y muestra opciones
+5. **Limpieza**: Si cambia la marca, se limpia el modelo seleccionado
+
+### Flujo de Filtros y Búsqueda
+
+1. **Búsqueda Unificada**:
+   - Usuario escribe en el input de búsqueda
+   - Debounce de 500ms previene múltiples peticiones
+   - Backend busca en `mark.name`, `model.name` y `vehicleId`
+   - Resultados se actualizan en la tabla
+
+2. **Filtro por Años**:
+   - Usuario selecciona "Año Desde" y/o "Año Hasta"
+   - Se envía petición inmediatamente (sin debounce)
+   - Backend filtra con operadores `$gte` y `$lte`
+   - Tabla muestra resultados filtrados
+
+3. **Limpiar Filtros**:
+   - Botón "Limpiar Filtros" resetea todos los filtros
+   - Recarga la lista completa
+
+### Gestión de Estado (Pinia)
+
+- **authStore**: Estado global de autenticación (user, token, isAuthenticated)
+- **vehicleStore**: Estado de vehículos (vehicles, total, loading, error)
+- **vehicleMarkStore**: Estado de marcas y modelos (marks, marksWithModels, loading)
+
+### Interceptores de Axios
+
+- **Request Interceptor**: Agrega token Bearer automáticamente si existe
+- **Response Interceptor**: 
+  - Si recibe 401, limpia sesión y redirige a login
+  - Maneja errores de red y muestra mensajes apropiados
 
 ## 📝 Convenciones de Código
 

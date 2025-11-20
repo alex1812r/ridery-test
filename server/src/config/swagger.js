@@ -54,20 +54,72 @@ const options = {
             }
           }
         },
+        VehicleMark: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'ID de MongoDB de la marca'
+            },
+            name: {
+              type: 'string',
+              description: 'Nombre de la marca',
+              example: 'Toyota'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
+        VehicleModel: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'ID de MongoDB del modelo'
+            },
+            name: {
+              type: 'string',
+              description: 'Nombre del modelo',
+              example: 'Corolla'
+            },
+            mark: {
+              $ref: '#/components/schemas/VehicleMark'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        },
         Vehicle: {
           type: 'object',
           properties: {
             _id: {
               type: 'string',
-              description: 'ID del vehículo'
+              description: 'ID de MongoDB del vehículo'
+            },
+            vehicleId: {
+              type: 'string',
+              description: 'ID único del vehículo en formato VEH-XXXX',
+              example: 'VEH-0001'
             },
             mark: {
-              type: 'string',
-              description: 'Marca del vehículo'
+              $ref: '#/components/schemas/VehicleMark',
+              description: 'Marca del vehículo (objeto poblado)'
             },
             model: {
-              type: 'string',
-              description: 'Modelo del vehículo'
+              $ref: '#/components/schemas/VehicleModel',
+              description: 'Modelo del vehículo (objeto poblado)'
             },
             year: {
               type: 'number',
@@ -94,7 +146,7 @@ const options = {
               format: 'date-time'
             }
           },
-          required: ['mark', 'model', 'year', 'status', 'createdBy']
+          required: ['vehicleId', 'mark', 'model', 'year', 'status', 'createdBy']
         },
         Error: {
           type: 'object',
@@ -140,6 +192,14 @@ const options = {
       {
         name: 'Vehicles',
         description: 'Endpoints de gestión de vehículos'
+      },
+      {
+        name: 'VehicleMarks',
+        description: 'Endpoints de gestión de marcas y modelos de vehículos'
+      },
+      {
+        name: 'Dashboard',
+        description: 'Endpoints del dashboard'
       },
       {
         name: 'Health',

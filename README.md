@@ -69,18 +69,22 @@ NODE_ENV=development
 JWT_SECRET=tu-secret-key-super-segura-aqui
 JWT_EXPIRES_IN=7d
 
-# SMTP (Mailtrap)
+# SMTP (Mailtrap para desarrollo)
 SMTP_HOST=sandbox.smtp.mailtrap.io
 SMTP_PORT=2525
 SMTP_USER=87dd3400f35e72
-SMTP_PASS=tu-contraseña-de-mailtrap
+SMTP_PASS=tu-contraseña-de-mailtrap-aquí
 SMTP_FROM=noreply@ridery.com
 
 # Frontend URL (para enlaces en correos)
 FRONTEND_URL=http://localhost:4173
 ```
 
-**Ver `server/ENV_VARIABLES.md` para más detalles.**
+**Notas:**
+- `MONGODB_URI`: Con Docker, será sobrescrito automáticamente para usar el servicio interno
+- `SMTP_PASS`: Reemplaza con tu contraseña real de Mailtrap
+- `JWT_SECRET`: Usa una clave segura y aleatoria en producción
+- `FRONTEND_URL`: Actualiza con la URL real de tu frontend en producción
 
 ### 2. Variables de Entorno - Frontend
 
@@ -90,7 +94,10 @@ Crea el archivo `client/.env` con:
 VITE_API_URL=http://localhost:5000/api
 ```
 
-**Ver `client/ENV_VARIABLES.md` para más detalles.**
+**Notas:**
+- Las variables de Vite deben comenzar con `VITE_` para estar disponibles en el código
+- Esta variable se usa en tiempo de build, no en runtime
+- En producción, actualiza con la URL real de tu backend
 
 ## 🐳 Ejecución con Docker (Recomendado)
 
@@ -217,6 +224,8 @@ Esto creará:
 - **Usuario administrador**: 
   - Email: `admin@ridery.com`
   - Password: `admin123`
+- **15 marcas de vehículos** (Toyota, Honda, Ford, Chevrolet, Nissan, etc.)
+- **~150 modelos de vehículos** distribuidos entre las marcas
 - **25 vehículos** con diferentes marcas, modelos, años y estados
 
 ## 🌐 Acceso a los Servicios
@@ -330,9 +339,37 @@ docker compose down -v --rmi all
 
 - **Backend**: Clean Architecture (Routes → Controllers → Services → Models)
 - **Frontend**: Screaming Architecture (módulos por funcionalidad)
-- **Base de Datos**: MongoDB con Mongoose ODM
+- **Base de Datos**: MongoDB con Mongoose ODM y relaciones entre colecciones
 - **Autenticación**: JWT con tokens Bearer
 - **Validación**: Zod (frontend) y validaciones en servicios (backend)
+
+## 🔄 Funcionalidades Principales
+
+### Gestión de Vehículos
+- **CRUD completo**: Crear, leer, actualizar y eliminar vehículos
+- **Formulario en cascada**: Selección de marca → carga dinámica de modelos
+- **Atributos cerrados**: Todos los campos son selects con opciones predefinidas del backend
+- **Paginación server-side**: Manejo eficiente de grandes volúmenes de datos
+- **Ordenamiento**: Por múltiples campos (ID, marca, modelo, año, estado, fecha)
+- **Filtros avanzados**: 
+  - Búsqueda unificada en marca, modelo e ID único
+  - Filtro por rango de años
+- **Relaciones**: Vehículos relacionados con marcas y modelos (estructura relacional)
+
+### Autenticación y Seguridad
+- **Registro y login** con JWT
+- **Recuperación de contraseña** con tokens temporales y envío de correos
+- **Protección de rutas** con guards en frontend y middleware en backend
+- **Hash de contraseñas** con bcryptjs
+
+### Dashboard
+- **Indicadores en tiempo real**: Total de usuarios, vehículos registrados, vehículos activos
+- **Agregaciones optimizadas** con Mongoose
+
+### Gestión de Marcas y Modelos
+- **Entidades separadas**: VehicleMark y VehicleModel con relación
+- **Endpoints dedicados**: Para obtener marcas y modelos desde el frontend
+- **Validación de relaciones**: El backend valida que el modelo pertenezca a la marca
 
 ## 📦 Stack Tecnológico
 

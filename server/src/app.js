@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/authRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
+import vehicleMarkRoutes from './routes/vehicleMarkRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 
 // Configuración de Express
@@ -33,6 +34,9 @@ app.use('/api/auth', authRoutes);
 
 // Rutas de vehículos (protegidas por authMiddleware)
 app.use('/api/vehicles', vehicleRoutes);
+
+// Rutas de marcas y modelos de vehículos (protegidas por authMiddleware)
+app.use('/api/vehicle-marks', vehicleMarkRoutes);
 
 // Rutas del dashboard (indicadores e insights)
 app.use('/api/dashboard', dashboardRoutes);

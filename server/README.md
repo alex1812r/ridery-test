@@ -25,22 +25,27 @@ server/
 │   ├── controllers/         # Controladores HTTP (Capa de Presentación)
 │   │   ├── authController.js      # Autenticación y usuarios
 │   │   ├── dashboardController.js # Indicadores del dashboard
-│   │   └── vehicleController.js   # Gestión de vehículos
+│   │   ├── vehicleController.js   # Gestión de vehículos
+│   │   └── vehicleMarkController.js # Gestión de marcas y modelos
 │   │
 │   ├── services/            # Lógica de Negocio (Capa de Dominio)
 │   │   ├── authService.js         # Servicios de autenticación
 │   │   ├── dashboardService.js    # Agregaciones y métricas
 │   │   ├── emailService.js        # Envío de correos (Nodemailer)
-│   │   └── vehicleService.js      # Lógica de vehículos
+│   │   ├── vehicleService.js      # Lógica de vehículos
+│   │   └── vehicleMarkService.js  # Lógica de marcas y modelos
 │   │
 │   ├── models/              # Modelos de Base de Datos
 │   │   ├── User.js          # Modelo de Usuario (email, password, reset tokens)
-│   │   └── Vehicle.js       # Modelo de Vehículo (mark, model, year, status)
+│   │   ├── VehicleMark.js   # Modelo de Marca de Vehículo
+│   │   ├── VehicleModel.js  # Modelo de Modelo de Vehículo (relación con VehicleMark)
+│   │   └── Vehicle.js       # Modelo de Vehículo (relaciones con VehicleMark y VehicleModel)
 │   │
 │   ├── routes/              # Definición de Rutas
 │   │   ├── authRoutes.js          # /api/auth/*
 │   │   ├── dashboardRoutes.js     # /api/dashboard/*
-│   │   └── vehicleRoutes.js       # /api/vehicles/*
+│   │   ├── vehicleRoutes.js       # /api/vehicles/*
+│   │   └── vehicleMarkRoutes.js  # /api/vehicle-marks/*
 │   │
 │   ├── middleware/          # Middlewares personalizados
 │   │   └── authMiddleware.js      # Validación de JWT
@@ -58,8 +63,7 @@ server/
 ├── .dockerignore            # Archivos excluidos del build de Docker
 ├── Dockerfile                # Imagen Docker del backend
 ├── package.json
-├── .env                      # Variables de entorno (no versionado)
-└── ENV_VARIABLES.md         # Documentación de variables de entorno
+└── .env                      # Variables de entorno (no versionado)
 ```
 
 ## 🔑 Módulos y Funcionalidades
@@ -89,23 +93,52 @@ server/
 ### 2. Módulo de Vehículos (`/api/vehicles`)
 
 **Rutas:**
-- `GET /api/vehicles` - Listar vehículos con paginación (requiere auth)
+- `GET /api/vehicles` - Listar vehículos con paginación, ordenamiento y filtros (requiere auth)
+- `GET /api/vehicles/:id` - Obtener un vehículo por ID (requiere auth)
 - `POST /api/vehicles` - Crear nuevo vehículo (requiere auth)
-- `PATCH /api/vehicles/:id/status` - Actualizar estado de vehículo (requiere auth)
+- `PUT /api/vehicles/:id` - Actualizar vehículo completo (requiere auth)
+- `DELETE /api/vehicles/:id` - Eliminar vehículo (requiere auth)
+- `PATCH /api/vehicles/:id/status` - Actualizar solo el estado (requiere auth)
 
 **Archivos:**
 - `controllers/vehicleController.js` - Maneja las peticiones HTTP
-- `services/vehicleService.js` - Lógica de negocio (CRUD, paginación, validaciones)
-- `models/Vehicle.js` - Esquema de vehículo (mark, model, year, status, timestamps)
+- `services/vehicleService.js` - Lógica de negocio (CRUD, paginación, validaciones, filtros)
+- `models/Vehicle.js` - Esquema de vehículo con relaciones a VehicleMark y VehicleModel
 - `routes/vehicleRoutes.js` - Definición de rutas protegidas
+- `utils/vehicleUtils.js` - Utilidades para generar IDs únicos (VEH-XXXX)
 
 **Características:**
-- Paginación con `page` y `limit`
-- Ordenamiento por fecha de creación descendente
+- Paginación server-side con `page` y `limit`
+- Ordenamiento por múltiples campos (vehicleId, mark, model, year, status, createdAt)
+- Filtros de búsqueda:
+  - Búsqueda unificada en marca, modelo e ID único
+  - Filtro por rango de años (yearFrom, yearTo)
+- Relaciones con VehicleMark y VehicleModel (populate automático)
+- ID único generado automáticamente (formato: VEH-0001, VEH-0002, etc.)
 - Estados: `available`, `maintenance`, `service`
 - Tracking de usuario que crea/actualiza (createdBy, updatedBy)
 
-### 3. Módulo de Dashboard (`/api/dashboard`)
+### 3. Módulo de Marcas y Modelos (`/api/vehicle-marks`)
+
+**Rutas:**
+- `GET /api/vehicle-marks` - Obtener todas las marcas (requiere auth)
+- `GET /api/vehicle-marks/with-models` - Obtener marcas con sus modelos (requiere auth)
+- `GET /api/vehicle-marks/:markId/models` - Obtener modelos de una marca específica (requiere auth)
+
+**Archivos:**
+- `controllers/vehicleMarkController.js` - Maneja las peticiones HTTP
+- `services/vehicleMarkService.js` - Lógica de negocio para marcas y modelos
+- `models/VehicleMark.js` - Esquema de marca de vehículo
+- `models/VehicleModel.js` - Esquema de modelo con relación a VehicleMark
+- `routes/vehicleMarkRoutes.js` - Definición de rutas protegidas
+
+**Características:**
+- Estructura relacional: VehicleModel pertenece a VehicleMark
+- Índices únicos para evitar duplicados
+- Ordenamiento alfabético por nombre
+- Populate automático de relaciones
+
+### 4. Módulo de Dashboard (`/api/dashboard`)
 
 **Rutas:**
 - `GET /api/dashboard/metrics` - Indicadores del dashboard (requiere auth)
@@ -157,7 +190,7 @@ El proyecto está configurado para usar **Mailtrap** como servicio de prueba de 
 
 ## 📚 Documentación API (Swagger)
 
-Documentación interactiva disponible en: **http://localhost:3000/api-docs**
+Documentación interactiva disponible en: **http://localhost:5000/api-docs**
 
 - **Formato**: OpenAPI 3.0 (YAML)
 - **Ubicación**: `src/docs/swagger/swagger.yaml`
@@ -177,20 +210,37 @@ npm install
 ```
 
 2. **Configurar variables de entorno:**
-Crea un archivo `.env` en la raíz del proyecto `server/` con las variables necesarias. Ver `ENV_VARIABLES.md` para la lista completa.
+Crea un archivo `.env` en la raíz del proyecto `server/` con las siguientes variables:
 
-**Mínimo requerido:**
 ```env
-PORT=3000
+# MongoDB
 MONGODB_URI=mongodb://localhost:27017/ridery
-JWT_SECRET=tu-secret-key-super-segura
+
+# Servidor
+PORT=5000
+NODE_ENV=development
+
+# JWT
+JWT_SECRET=tu-secret-key-super-segura-aqui
 JWT_EXPIRES_IN=7d
+
+# SMTP (Mailtrap para desarrollo)
 SMTP_HOST=sandbox.smtp.mailtrap.io
 SMTP_PORT=2525
 SMTP_USER=87dd3400f35e72
-SMTP_PASS=tu-contraseña-de-mailtrap
+SMTP_PASS=tu-contraseña-de-mailtrap-aquí
+SMTP_FROM=noreply@ridery.com
+
+# Frontend URL (para enlaces en correos)
 FRONTEND_URL=http://localhost:4173
 ```
+
+**Notas sobre variables de entorno:**
+- `MONGODB_URI`: Con Docker, será sobrescrito automáticamente para usar el servicio interno
+- `PORT`: Puede ser sobrescrito por docker-compose si es necesario
+- `SMTP_PASS`: Reemplaza con tu contraseña real de Mailtrap
+- `JWT_SECRET`: Usa una clave segura y aleatoria en producción
+- `FRONTEND_URL`: Actualiza con la URL real de tu frontend en producción
 
 3. **Asegurarse de que MongoDB esté corriendo**
 
@@ -213,7 +263,9 @@ npm run seed
 
 Esto creará:
 - 1 usuario administrador (email: `admin@ridery.com`, password: `admin123`)
-- 25 vehículos de prueba con diferentes marcas, modelos y estados
+- 15 marcas de vehículos (Toyota, Honda, Ford, Chevrolet, Nissan, etc.)
+- ~150 modelos de vehículos distribuidos entre las marcas
+- 25 vehículos de prueba con diferentes marcas, modelos, años y estados
 
 ## 🐳 Docker
 
@@ -260,6 +312,77 @@ npm run format
 # Verificar formato
 npm run format:check
 ```
+
+## 🔄 Cómo Funciona la Aplicación
+
+### Flujo de Autenticación
+
+1. **Registro/Login**: El usuario se registra o inicia sesión
+2. **JWT Token**: El backend genera un token JWT con expiración de 7 días
+3. **Almacenamiento**: El frontend guarda el token en `localStorage`
+4. **Peticiones Protegidas**: El interceptor de Axios agrega el token en el header `Authorization: Bearer <token>`
+5. **Validación**: El `authMiddleware` valida el token en cada petición protegida
+6. **Expiración**: Si el token expira o es inválido, el frontend redirige al login
+
+### Flujo de Gestión de Vehículos
+
+1. **Listado**: 
+   - Frontend solicita vehículos con paginación, ordenamiento y filtros
+   - Backend consulta MongoDB con populate de `mark` y `model`
+   - Retorna vehículos con objetos poblados (marca y modelo completos)
+
+2. **Creación**:
+   - Frontend obtiene marcas desde `GET /api/vehicle-marks`
+   - Usuario selecciona marca → Frontend carga modelos desde `GET /api/vehicle-marks/:markId/models`
+   - Usuario completa formulario y envía ObjectIds de `mark` y `model`
+   - Backend valida que el modelo pertenezca a la marca
+   - Genera ID único (VEH-XXXX) y crea el vehículo
+
+3. **Actualización**:
+   - Similar a creación, pero actualiza vehículo existente
+   - Valida relaciones marca-modelo
+
+4. **Eliminación**:
+   - Frontend muestra modal de confirmación
+   - Backend elimina vehículo por ID
+
+### Flujo de Recuperación de Contraseña
+
+1. **Solicitud**: Usuario ingresa email en `forgot-password`
+2. **Token**: Backend genera token aleatorio de 32 bytes y lo guarda en el usuario
+3. **Expiración**: Token expira en 1 hora
+4. **Email**: Backend envía correo con enlace usando Nodemailer + Mailtrap
+5. **Recuperación**: Usuario hace clic en enlace → Frontend valida token → Usuario ingresa nueva contraseña
+6. **Actualización**: Backend actualiza contraseña y limpia token
+
+### Estructura de Datos Relacional
+
+```
+VehicleMark (Marca)
+  ├── _id: ObjectId
+  └── name: String
+
+VehicleModel (Modelo)
+  ├── _id: ObjectId
+  ├── name: String
+  └── mark: ObjectId → VehicleMark
+
+Vehicle (Vehículo)
+  ├── _id: ObjectId
+  ├── vehicleId: String (VEH-0001)
+  ├── mark: ObjectId → VehicleMark
+  ├── model: ObjectId → VehicleModel
+  ├── year: Number
+  ├── status: Enum ['available', 'maintenance', 'service']
+  ├── createdBy: ObjectId → User
+  └── updatedBy: ObjectId → User
+```
+
+### Búsqueda y Filtros
+
+- **Búsqueda unificada**: Busca en `mark.name`, `model.name` y `vehicleId` usando regex case-insensitive
+- **Filtro por años**: Rango con `yearFrom` y `yearTo` usando operadores `$gte` y `$lte`
+- **Ordenamiento**: Soporta ordenamiento por campos directos y relaciones (con ordenamiento en memoria)
 
 ## 📝 Convenciones de Código
 

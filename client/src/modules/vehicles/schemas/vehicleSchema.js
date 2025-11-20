@@ -5,12 +5,10 @@ export const vehicleSchema = toTypedSchema(
   z.object({
     mark: z
       .string()
-      .min(1, 'La marca es requerida')
-      .min(2, 'La marca debe tener al menos 2 caracteres'),
+      .min(1, 'La marca es requerida'),
     model: z
       .string()
-      .min(1, 'El modelo es requerido')
-      .min(2, 'El modelo debe tener al menos 2 caracteres'),
+      .min(1, 'El modelo es requerido'),
     year: z
       .string()
       .min(1, 'El año es requerido')
